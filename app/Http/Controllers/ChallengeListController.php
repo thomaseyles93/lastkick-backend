@@ -24,7 +24,7 @@ class ChallengeListController extends Controller
         if ($parentId === null) {
             $challenges = ChallengeCategory::all();
         } else {
-            $query = Challenge::with('category', 'answers')->where('challenge_id', $parentId);
+            $query = Challenge::with('category')->where('challenge_id', $parentId);
             $challenges = $query->get();
         }
 
