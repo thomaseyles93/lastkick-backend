@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChallengeCategory;
 use Illuminate\Http\Request;
 use App\Models\Challenge;
 use App\Services\ChallengeService;
@@ -20,13 +21,13 @@ class ChallengeListController extends Controller
         $parentId = $request->query('parent_id');
         $userId = $request->query('user_id');
 
-        $query = Challenge::with('category', 'answers');
-
-        if ($parentId) {
-            $query->where('challenge_id', $parentId);
+        if ($parentId === null) {
+            $challenges = ChallengeCategory::all();
+        } else {
+            $query = Challenge::with('category', 'answers')->where('challenge_id', $parentId);
+            $challenges = $query->get();
         }
 
-        $challenges = $query->get();
 
         if ($userId) {
             $challenges->transform(function ($challenge) use ($userId) {
