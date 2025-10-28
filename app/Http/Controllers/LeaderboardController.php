@@ -31,7 +31,7 @@ class LeaderboardController extends Controller
                     $join->where('user_challenges_completions.challenge_type', $challengeType);
                 }
             })
-            ->groupBy('users.id')
+            ->groupBy('users.id', 'users.first_name', 'users.last_name')
             ->having('total_score', '>', 0)
             ->orderByDesc('total_score')
             ->orderBy('total_time')
