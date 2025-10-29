@@ -17,7 +17,7 @@ class Challenge extends Model
 
     public function category()
     {
-        return $this->belongsTo(ChallengeCategory::class, 'challenge_category_id');
+        return $this->belongsTo(ChallengeCategory::class, 'challenge_id');
     }
 
     public function answers()

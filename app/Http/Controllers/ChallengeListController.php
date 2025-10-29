@@ -6,6 +6,7 @@ use App\Models\ChallengeCategory;
 use Illuminate\Http\Request;
 use App\Models\Challenge;
 use App\Services\ChallengeService;
+use Illuminate\Support\Facades\Log;
 
 class ChallengeListController extends Controller
 {
@@ -19,30 +20,54 @@ class ChallengeListController extends Controller
     public function getChallenges(Request $request)
     {
         $parentId = $request->query('parent_id');
-        $userId = $request->query('user_id');
+        $userId   = $request->query('user_id');
 
         if ($parentId === null) {
+            // Return categories
             $challenges = ChallengeCategory::all();
         } else {
-            $query = Challenge::with('category')->where('challenge_id', $parentId);
-            $challenges = $query->get();
+            // Use get(), not all(), and eager-load relations
+            $challenges = Challenge::with(['category', 'completions'])
+                ->where('challenge_id', $parentId)
+                ->get();
+
+            // Add category_title and answer_count, hide relations
+            $challenges = $challenges->map(function ($challenge) {
+                if (!$challenge) return null;
+
+                $challenge->category_title = optional($challenge->category)->title;
+                $challenge->answer_count   = $challenge->answers ?? 0;
+                $challenge->makeHidden(['category', 'completions']);
+
+                return $challenge;
+            });
         }
 
+        if ($userId && $challenges->count()) {
+            $challenges = $challenges->map(function ($challenge) use ($userId) {
+                if (!$challenge) return null;
 
-        if ($userId) {
-            $challenges->transform(function ($challenge) use ($userId) {
-                $completion = $challenge->completions()->where('user_id', $userId)->first();
-                $challenge->user_completed = $completion ? true : false;
-                $challenge->user_score = $completion->score ?? 0;
+                // completions is a collection (because we eager-loaded it)
+                $completion = $challenge->completions
+                    ? $challenge->completions->where('user_id', $userId)->first()
+                    : null;
+
+                $challenge->user_completed  = (bool) $completion;
+                $challenge->user_score      = $completion->score ?? 0;
                 $challenge->user_time_taken = $completion->time_taken ?? 0;
+
+                $challenge->makeHidden(['category', 'completions']);
+
                 return $challenge;
             });
 
-            // Sort incomplete first
-            $challenges = $challenges->sortBy('user_completed');
+            $challenges = $challenges->sortBy('user_completed')->values();
         }
 
-        return response()->json(['status' => 'success', 'data' => $challenges]);
+        return response()->json([
+            'status' => 'success',
+            'data'   => $challenges,
+        ]);
     }
 
     public function getChallengeById(Request $request, $id)
